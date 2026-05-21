@@ -36,12 +36,21 @@ body {
     overflow-x: hidden;
     line-height: 1.6;
     position: relative;
+    /* No text / image selection anywhere — keep the vibe smooth */
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 img {
     max-width: 100%;
     height: auto;
     display: block;
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: auto;
 }
 
 /* ============================================================
