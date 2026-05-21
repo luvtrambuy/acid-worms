@@ -1,5 +1,16 @@
 # macOS
 .DS_Store
 
-# Reference files
+# Reference / dump files (not part of the landing)
 code.md
+codecode.md
+
+# Personal event docs (separate project, kept in repo dir for convenience)
+event-birthday/
+
+# Cursor IDE config
+.cursor/
+
+# Original source images (we ship from assets/images/optimized/)
+assets/images/*.heic
+assets/images/*.HEIC
