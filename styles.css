@@ -438,7 +438,7 @@ section, footer { position: relative; z-index: 2; }
 
 .phone-leashes .gallery-title {
     color: var(--aw-yellow);
-    text-shadow: 0 6px 0 var(--aw-orange);
+    text-shadow: 0 6px 0 var(--aw-pink-deep);
 }
 
 .gallery-title {
@@ -453,7 +453,6 @@ section, footer { position: relative; z-index: 2; }
     line-height: 1;
     position: relative;
     z-index: 3;
-    text-shadow: 0 6px 0 var(--aw-pink-deep);
 }
 
 .gallery-grid {
@@ -556,7 +555,6 @@ section, footer { position: relative; z-index: 2; }
     text-transform: lowercase;
     letter-spacing: -0.02em;
     line-height: 1;
-    text-shadow: 0 6px 0 var(--aw-pink-deep);
 }
 
 .worm-arcade {
