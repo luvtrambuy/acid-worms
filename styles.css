@@ -584,13 +584,14 @@ section, footer { position: relative; z-index: 2; }
 
 .worm-hint {
     margin: 1.8rem auto 0;
-    max-width: 480px;
-    font-family: var(--font-type);
-    font-size: 1rem;
+    max-width: 520px;
+    font-family: var(--font-main);
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    font-weight: 700;
     color: var(--aw-black);
-    letter-spacing: 0.04em;
-    opacity: 0.75;
-    line-height: 1.5;
+    letter-spacing: -0.02em;
+    opacity: 0.85;
+    line-height: 1.4;
 }
 
 .worm-cta {
