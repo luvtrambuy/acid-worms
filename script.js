@@ -21,6 +21,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 parallaxTicking = false;
             });
         }, { passive: true });
+
+        // Mobile: hold the logo to make it buzz, release to stop
+        const startBuzz = () => heroWrap.classList.add('is-buzzing');
+        const stopBuzz  = () => heroWrap.classList.remove('is-buzzing');
+        heroWrap.addEventListener('touchstart',  startBuzz, { passive: true });
+        heroWrap.addEventListener('touchend',    stopBuzz);
+        heroWrap.addEventListener('touchcancel', stopBuzz);
     }
 
     /* ---------- Tag stars inside the inline logo SVG ---------- */
@@ -99,11 +106,21 @@ document.addEventListener('DOMContentLoaded', function() {
     /* ---------- Global cursor follower (acid blob) ---------- */
     initCursorBlob();
 
-    /* ---------- Build your own button — confetti burst ---------- */
+    /* ---------- Confetti system — global, bouncing physics ---------- */
+    const confetti = new ConfettiSystem();
+
+    // Any click anywhere = small burst at the click point.
+    // Skip the worm canvas (its own worm lives there) and lightbox overlays.
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#acid-worm')) return;
+        if (e.target.closest('.confetti-canvas')) return;
+        confetti.burst(e.clientX, e.clientY, 16, /*power*/ 0.85);
+    });
+
+    /* ---------- Build your own button — mega burst ---------- */
     const buildBtn = document.getElementById('build-your-own');
     if (buildBtn) {
-        buildBtn.addEventListener('click', (e) => {
-            // Analytics placeholder
+        buildBtn.addEventListener('click', () => {
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({
                 event: 'build_your_own_click',
@@ -112,11 +129,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             console.log('[track] build_your_own_click');
 
-            // Burst confetti from the button position
             const rect = buildBtn.getBoundingClientRect();
-            const originX = rect.left + rect.width / 2;
-            const originY = rect.top + rect.height / 2;
-            burstConfetti(originX, originY);
+            confetti.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 70, /*power*/ 1.25);
         });
     }
 
@@ -194,57 +208,155 @@ function initCursorBlob() {
 }
 
 /* ============================================================
-   CONFETTI — pixel-square burst with gravity, originates from (x,y).
+   CONFETTI SYSTEM — single full-screen canvas, particles with
+   gravity, bouncing off viewport walls, accumulating until they
+   come to rest and slowly fade away.
    ============================================================ */
-function burstConfetti(originX, originY) {
-    const COLORS  = ['#E8E007', '#FBD301', '#FDA905', '#E7196E', '#AA1150', '#1FD67E', '#FFF9EC'];
-    const COUNT   = 70;
-    const GRAVITY = 1400; // px / s²
+class ConfettiSystem {
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.canvas.className = 'confetti-canvas';
+        document.body.appendChild(this.canvas);
+        this.ctx = this.canvas.getContext('2d');
 
-    const layer = document.createElement('div');
-    layer.className = 'confetti-layer';
-    document.body.appendChild(layer);
+        this.particles = [];
+        this.running = false;
+        this.lastTime = 0;
 
-    for (let i = 0; i < COUNT; i++) {
-        const piece = document.createElement('div');
-        piece.className = 'confetti-piece';
+        this.colors = ['#E8E007', '#FBD301', '#FDA905', '#E7196E', '#AA1150', '#1FD67E', '#FFF9EC'];
 
-        const size = 8 + Math.random() * 14;
-        piece.style.width  = size + 'px';
-        piece.style.height = size + 'px';
-        piece.style.background = COLORS[Math.floor(Math.random() * COLORS.length)];
-        piece.style.left = originX + 'px';
-        piece.style.top  = originY + 'px';
-        if (Math.random() < 0.3) piece.style.borderRadius = '50%';
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
 
-        // Random launch — mostly upward (-π/2 ± π/3) with some sideways spread
-        const angle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * 1.6);
-        const speed = 380 + Math.random() * 520;
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed;
-
-        const duration = 1100 + Math.random() * 700; // ms
-        const t = duration / 1000;
-        // Final position with simple ballistic physics:
-        // x = vx * t, y = vy * t + 0.5 * g * t²
-        const endX = vx * t;
-        const endY = vy * t + 0.5 * GRAVITY * t * t;
-        const rotation = (Math.random() - 0.5) * 1440; // up to 4 full spins
-
-        layer.appendChild(piece);
-
-        piece.animate(
-            [
-                { transform: `translate(-50%, -50%) translate(0px, 0px) rotate(0deg)`,           opacity: 1 },
-                { transform: `translate(-50%, -50%) translate(${endX * 0.5}px, ${vy * t * 0.5}px) rotate(${rotation * 0.5}deg)`, opacity: 1, offset: 0.5 },
-                { transform: `translate(-50%, -50%) translate(${endX}px, ${endY}px) rotate(${rotation}deg)`, opacity: 0 }
-            ],
-            { duration, easing: 'cubic-bezier(0.2, 0.6, 0.3, 1)', fill: 'forwards' }
-        );
+        // Hard cap so we don't melt the laptop if the user really goes nuts
+        this.MAX_PARTICLES = 1200;
     }
 
-    // Cleanup after the longest possible piece finishes
-    setTimeout(() => layer.remove(), 2200);
+    resize() {
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.w = window.innerWidth;
+        this.h = window.innerHeight;
+        this.canvas.width  = Math.floor(this.w * this.dpr);
+        this.canvas.height = Math.floor(this.h * this.dpr);
+        this.canvas.style.width  = this.w + 'px';
+        this.canvas.style.height = this.h + 'px';
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    }
+
+    burst(x, y, count = 20, power = 1) {
+        for (let i = 0; i < count; i++) {
+            // Random direction, biased slightly upward
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
+            const speed = (260 + Math.random() * 520) * power;
+
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: 6 + Math.random() * 12,
+                color: this.colors[Math.floor(Math.random() * this.colors.length)],
+                rot: Math.random() * Math.PI * 2,
+                vrot: (Math.random() - 0.5) * 14,
+                bounce: 0.5 + Math.random() * 0.2,
+                shape: Math.random() < 0.35 ? 'circle' : 'square',
+                life: 1,
+                restTime: 0
+            });
+        }
+        // Drop the oldest if we're over the cap
+        while (this.particles.length > this.MAX_PARTICLES) this.particles.shift();
+
+        if (!this.running) this.start();
+    }
+
+    start() {
+        this.running = true;
+        this.lastTime = performance.now();
+        const loop = () => {
+            if (!this.running) return;
+            const now = performance.now();
+            const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+            this.lastTime = now;
+
+            this.update(dt);
+            this.draw();
+
+            if (this.particles.length === 0) {
+                this.running = false;
+                this.ctx.clearRect(0, 0, this.w, this.h);
+                return;
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
+    update(dt) {
+        const GRAVITY  = 1500;
+        const AIR_DRAG = 0.992;
+        const W = this.w;
+        const H = this.h;
+        const FLOOR_FADE = 0.45; // when resting, life drops this fast per second
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+
+            p.vy += GRAVITY * dt;
+            p.vx *= AIR_DRAG;
+            p.vy *= AIR_DRAG;
+            p.x  += p.vx * dt;
+            p.y  += p.vy * dt;
+            p.rot += p.vrot * dt;
+
+            // Walls — bounce with damping
+            if (p.x < 0)      { p.x = 0;      p.vx = -p.vx * p.bounce; p.vrot *= 0.85; }
+            else if (p.x > W) { p.x = W;      p.vx = -p.vx * p.bounce; p.vrot *= 0.85; }
+
+            if (p.y < 0)      { p.y = 0;      p.vy = -p.vy * p.bounce; }
+            else if (p.y > H) {
+                p.y = H;
+                p.vy = -p.vy * p.bounce;
+                p.vx *= 0.82;          // floor friction on x
+                p.vrot *= 0.6;
+            }
+
+            // Detect "at rest" on the floor — then start fading
+            const nearFloor = p.y >= H - 4;
+            const slow = Math.abs(p.vx) < 18 && Math.abs(p.vy) < 30;
+            if (nearFloor && slow) {
+                p.restTime += dt;
+                if (p.restTime > 1.2) {
+                    p.life -= FLOOR_FADE * dt;
+                }
+            } else {
+                p.restTime = 0;
+            }
+
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.w, this.h);
+        for (const p of this.particles) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            if (p.shape === 'circle') {
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            }
+            ctx.restore();
+        }
+    }
 }
 
 /* ============================================================
