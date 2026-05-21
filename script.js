@@ -54,7 +54,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const galleryItems = document.querySelectorAll('.gallery-item');
     galleryItems.forEach((item, index) => {
         item.style.opacity = '0';
-        item.style.transition = `opacity 0.6s ease ${index * 0.08}s`;
+        // Keep the same transform/box-shadow timing as in CSS so the
+        // polaroid hover doesn't snap (inline style would otherwise
+        // override the CSS transition rule).
+        item.style.transition =
+            `opacity 0.6s ease ${(index * 0.08).toFixed(2)}s, ` +
+            `transform 1.0s cubic-bezier(0.22, 0.9, 0.3, 1), ` +
+            `box-shadow 1.0s ease`;
         observerFade.observe(item);
     });
 
