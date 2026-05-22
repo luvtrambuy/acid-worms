@@ -50,19 +50,25 @@ img {
     display: block;
     -webkit-user-drag: none;
     user-drag: none;
-    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Let taps pass through to the polaroid wrapper (which has the click
+       handler for the lightbox) and prevent iOS long-press image menus. */
+    pointer-events: none;
 }
 
 /* ============================================================
-   PAGE BACKGROUND CANVAS — one continuous gradient covering the
-   whole document height. Section backgrounds are transparent so
-   the canvas shows through, killing all section seams.
+   PAGE BACKGROUND CANVAS — viewport-fixed gradient + blobs.
+   Fixed positioning means the background never depends on body's
+   resolved height (iOS Safari mis-resolves height: 100% on long
+   pages), so the gradient covers the entire scroll on every device.
+   Section backgrounds stay transparent so the canvas shows through.
    ============================================================ */
 .page-bg {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    width: 100%;
-    height: 100%;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
@@ -245,12 +251,34 @@ section, footer { position: relative; z-index: 2; }
     50%      { transform: scale(1.045); }
 }
 
-.hero-logo-wrap:hover .hero-logo-svg,
+/* Desktop hover — SVG turbulence filter (renders well with a real cursor).
+   Gated by (hover: hover) so touch devices don't get a sticky stuck state
+   where the logo stays buzzed after a tap. */
+@media (hover: hover) {
+    .hero-logo-wrap:hover .hero-logo-svg {
+        animation-play-state: paused;
+        filter:
+            drop-shadow(0 12px 36px rgba(232, 224, 7, 0.45))
+            url(#aw-electric);
+    }
+}
+
+/* Tap-and-hold buzz on mobile — visible transform shake (iOS Safari
+   doesn't reliably animate feTurbulence) + yellow glow drop-shadow. */
 .hero-logo-wrap.is-buzzing .hero-logo-svg {
-    animation-play-state: paused;
+    animation: logo-buzz 0.08s linear infinite;
     filter:
         drop-shadow(0 12px 36px rgba(232, 224, 7, 0.45))
         url(#aw-electric);
+}
+
+@keyframes logo-buzz {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    20%  { transform: translate(-1.5px, 1px) rotate(-0.8deg); }
+    40%  { transform: translate(1.5px, -1px) rotate(0.6deg); }
+    60%  { transform: translate(-1px, -1.5px) rotate(0.8deg); }
+    80%  { transform: translate(1px, 1.5px) rotate(-0.6deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 .hero-logo-svg .star {
@@ -350,11 +378,20 @@ section, footer { position: relative; z-index: 2; }
     z-index: 2;
 }
 
-.about-image:hover {
+.about-image:active {
     transform: rotate(0deg) scale(1.025);
     box-shadow:
         0 28px 56px rgba(0, 0, 0, 0.30),
         0 10px 20px rgba(0, 0, 0, 0.20);
+}
+
+@media (hover: hover) {
+    .about-image:hover {
+        transform: rotate(0deg) scale(1.025);
+        box-shadow:
+            0 28px 56px rgba(0, 0, 0, 0.30),
+            0 10px 20px rgba(0, 0, 0, 0.20);
+    }
 }
 
 .about-image .photo,
@@ -376,9 +413,16 @@ section, footer { position: relative; z-index: 2; }
     transition: transform 1.0s cubic-bezier(0.22, 0.9, 0.3, 1);
 }
 
-.about-image:hover .photo img,
-.gallery-item:hover .photo img {
+.about-image:active .photo img,
+.gallery-item:active .photo img {
     transform: scale(calc(var(--zoom, 1) * 1.04));
+}
+
+@media (hover: hover) {
+    .about-image:hover .photo img,
+    .gallery-item:hover .photo img {
+        transform: scale(calc(var(--zoom, 1) * 1.04));
+    }
 }
 
 .about-image .caption {
@@ -519,12 +563,22 @@ section, footer { position: relative; z-index: 2; }
 .gallery-item:nth-child(8) { transform: rotate(2.8deg) translateY(-6px); }
 .gallery-item:nth-child(9) { transform: rotate(-3deg); }
 
-.gallery-item:hover {
+.gallery-item:active {
     transform: rotate(0deg) scale(1.025) !important;
     box-shadow:
         0 28px 56px rgba(0, 0, 0, 0.30),
         0 10px 20px rgba(0, 0, 0, 0.20);
     z-index: 4;
+}
+
+@media (hover: hover) {
+    .gallery-item:hover {
+        transform: rotate(0deg) scale(1.025) !important;
+        box-shadow:
+            0 28px 56px rgba(0, 0, 0, 0.30),
+            0 10px 20px rgba(0, 0, 0, 0.20);
+        z-index: 4;
+    }
 }
 
 /* ===== INTERACTIVE — ACID WORM ARCADE ===== */
@@ -581,6 +635,9 @@ section, footer { position: relative; z-index: 2; }
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     cursor: crosshair;
+    /* Without this, dragging a finger inside the arcade scrolls the page
+       instead of moving the worm. */
+    touch-action: none;
 }
 
 .worm-hint {
@@ -612,10 +669,12 @@ section, footer { position: relative; z-index: 2; }
     box-shadow: 6px 6px 0 var(--aw-black);
 }
 
-.worm-cta:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: 9px 9px 0 var(--aw-black);
-    background: var(--aw-yellow-acid);
+@media (hover: hover) {
+    .worm-cta:hover {
+        transform: translate(-3px, -3px);
+        box-shadow: 9px 9px 0 var(--aw-black);
+        background: var(--aw-yellow-acid);
+    }
 }
 
 .worm-cta:active {
@@ -690,10 +749,15 @@ section, footer { position: relative; z-index: 2; }
     transition: transform 0.3s cubic-bezier(0.34, 1.5, 0.5, 1), box-shadow 0.3s ease, background 0.3s ease;
 }
 
-.footer-card:hover {
-    transform: translate(-4px, -4px) rotate(-1deg);
-    box-shadow: 11px 11px 0 var(--aw-black);
-    background: var(--aw-yellow-acid);
+@media (hover: hover) {
+    .footer-card:hover {
+        transform: translate(-4px, -4px) rotate(-1deg);
+        box-shadow: 11px 11px 0 var(--aw-black);
+        background: var(--aw-yellow-acid);
+    }
+    .footer-card:hover .footer-card-arrow {
+        transform: translate(4px, -4px);
+    }
 }
 
 .footer-card:active {
@@ -715,10 +779,6 @@ section, footer { position: relative; z-index: 2; }
     font-weight: 700;
     line-height: 1;
     transition: transform 0.3s ease;
-}
-
-.footer-card:hover .footer-card-arrow {
-    transform: translate(4px, -4px);
 }
 
 .footer-bottom {

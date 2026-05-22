@@ -17,13 +17,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     const progress = scrolled / heroHeight;
                     const scale = 1 + progress * 0.12;
                     heroWrap.style.transform = `scale(${scale})`;
+                } else {
+                    heroWrap.style.transform = 'scale(1.12)';
                 }
                 parallaxTicking = false;
             });
         }, { passive: true });
 
-        // Mobile: hold the logo to make it buzz, release to stop
-        const startBuzz = () => heroWrap.classList.add('is-buzzing');
+        // Mobile: hold the logo to make it buzz, release to stop.
+        // Also ping the haptics API where available (Android Chrome / Firefox).
+        const startBuzz = () => {
+            heroWrap.classList.add('is-buzzing');
+            if (navigator.vibrate) navigator.vibrate(20);
+        };
         const stopBuzz  = () => heroWrap.classList.remove('is-buzzing');
         heroWrap.addEventListener('touchstart',  startBuzz, { passive: true });
         heroWrap.addEventListener('touchend',    stopBuzz);
@@ -34,22 +40,32 @@ document.addEventListener('DOMContentLoaded', function() {
     tagLogoStars();
 
     /* ---------- Fade-in observers ---------- */
-    const observerOptions = { threshold: 0.05, rootMargin: '0px 0px -80px 0px' };
+    const observerOptions = { threshold: 0.01, rootMargin: '0px' };
+    const supportsIO = 'IntersectionObserver' in window;
 
-    const observerTranslate = new IntersectionObserver((entries) => {
+    const revealTranslate = (el) => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+    };
+    const revealFade = (el) => { el.style.opacity = '1'; };
+
+    const observerTranslate = supportsIO ? new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+                revealTranslate(entry.target);
+                obs.unobserve(entry.target);
             }
         });
-    }, observerOptions);
+    }, observerOptions) : null;
 
-    const observerFade = new IntersectionObserver((entries) => {
+    const observerFade = supportsIO ? new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) entry.target.style.opacity = '1';
+            if (entry.isIntersecting) {
+                revealFade(entry.target);
+                obs.unobserve(entry.target);
+            }
         });
-    }, observerOptions);
+    }, observerOptions) : null;
 
     const galleryItems = document.querySelectorAll('.gallery-item');
     galleryItems.forEach((item, index) => {
@@ -61,7 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
             `opacity 0.6s ease ${(index * 0.08).toFixed(2)}s, ` +
             `transform 1.0s cubic-bezier(0.22, 0.9, 0.3, 1), ` +
             `box-shadow 1.0s ease`;
-        observerFade.observe(item);
+        if (observerFade) observerFade.observe(item);
+        else revealFade(item);
     });
 
     const aboutText = document.querySelector('.about-text');
@@ -69,8 +86,19 @@ document.addEventListener('DOMContentLoaded', function() {
         aboutText.style.opacity = '0';
         aboutText.style.transform = 'translateY(40px)';
         aboutText.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-        observerTranslate.observe(aboutText);
+        if (observerTranslate) observerTranslate.observe(aboutText);
+        else revealTranslate(aboutText);
     }
+
+    // Safety net: if iOS Safari fumbles IntersectionObserver (known on
+    // short pages / fast scrolls), force-reveal anything still hidden
+    // after 2s so the gallery never stays invisible.
+    setTimeout(() => {
+        galleryItems.forEach(item => {
+            if (item.style.opacity === '0') revealFade(item);
+        });
+        if (aboutText && aboutText.style.opacity === '0') revealTranslate(aboutText);
+    }, 2000);
 
     /* ---------- Gallery lightbox ---------- */
     galleryItems.forEach(item => {
@@ -115,13 +143,22 @@ document.addEventListener('DOMContentLoaded', function() {
     /* ---------- Confetti system — global, bouncing physics ---------- */
     const confetti = new ConfettiSystem();
 
-    // Any click anywhere = small burst at the click point.
+    // Any tap/click anywhere = small burst at the point.
     // Skip the worm canvas (its own worm lives there) and lightbox overlays.
-    document.addEventListener('click', (e) => {
+    // pointerdown fires reliably for both mouse and touch; click is kept as a
+    // fallback for environments without Pointer Events, with a small dedupe
+    // window so we don't double-burst when both fire on the same tap.
+    let lastBurstTs = 0;
+    const burstAt = (e) => {
         if (e.target.closest('#acid-worm')) return;
         if (e.target.closest('.confetti-canvas')) return;
+        const now = performance.now();
+        if (now - lastBurstTs < 300) return;
+        lastBurstTs = now;
         confetti.burst(e.clientX, e.clientY, 16, /*power*/ 0.85);
-    });
+    };
+    document.addEventListener('pointerdown', burstAt);
+    document.addEventListener('click', burstAt);
 
     /* ---------- Build your own button — mega burst ---------- */
     const buildBtn = document.getElementById('build-your-own');
@@ -421,12 +458,20 @@ function initAcidWorm(canvas) {
             mouseInside = true;
         });
         canvas.addEventListener('mouseleave', () => { mouseInside = false; });
+        canvas.addEventListener('touchstart', (e) => {
+            const t = e.touches[0]; if (!t) return;
+            const rect = canvas.getBoundingClientRect();
+            target = { x: t.clientX - rect.left, y: t.clientY - rect.top };
+            mouseInside = true;
+            e.preventDefault();
+        }, { passive: false });
         canvas.addEventListener('touchmove', (e) => {
             const t = e.touches[0]; if (!t) return;
             const rect = canvas.getBoundingClientRect();
             target = { x: t.clientX - rect.left, y: t.clientY - rect.top };
             mouseInside = true;
-        }, { passive: true });
+            e.preventDefault();
+        }, { passive: false });
         canvas.addEventListener('touchend', () => { mouseInside = false; });
         window.addEventListener('resize', () => { resize(); });
     }
