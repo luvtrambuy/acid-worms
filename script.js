@@ -140,6 +140,12 @@ document.addEventListener('DOMContentLoaded', function() {
     /* ---------- Global cursor follower (acid blob) ---------- */
     initCursorBlob();
 
+    /* ---------- Background worm swarm ---------- */
+    const wormCanvasEl = document.querySelector('.bg-worms');
+    if (wormCanvasEl && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        new BgWormSwarm(wormCanvasEl);
+    }
+
     /* ---------- Confetti system — global, bouncing physics ---------- */
     const confetti = new ConfettiSystem();
 
@@ -566,4 +572,130 @@ function initAcidWorm(canvas) {
     init();
     bindEvents();
     loop();
+}
+
+/* ============================================================
+   BACKGROUND WORM SWARM — small, slow, drifting chains of circles
+   floating across a fixed full-viewport canvas. Replaces the old
+   symmetric dot grid. ~25 worms on desktop, ~14 on mobile.
+   Each worm = 5–7 segments following a head that eases toward a
+   slowly-changing target. Movement is intentionally so slow it
+   reads as ambient background motion, not animation.
+   ============================================================ */
+class BgWormSwarm {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.mobile = window.matchMedia('(hover: none)').matches;
+
+        this.count = this.mobile ? 14 : 25;
+        this.worms = [];
+
+        this.colors = [
+            'rgba(232, 224, 7, 0.85)',   // acid yellow
+            'rgba(253, 169, 5, 0.78)',   // orange
+            'rgba(251, 211, 1, 0.78)',   // yellow
+            'rgba(255, 249, 236, 0.55)', // paper-cream
+        ];
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+
+        for (let i = 0; i < this.count; i++) this.worms.push(this.makeWorm());
+
+        this.lastFrame = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    resize() {
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.w = window.innerWidth;
+        this.h = window.innerHeight;
+        this.canvas.width  = Math.floor(this.w * this.dpr);
+        this.canvas.height = Math.floor(this.h * this.dpr);
+        this.canvas.style.width  = this.w + 'px';
+        this.canvas.style.height = this.h + 'px';
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    }
+
+    makeWorm() {
+        const segCount = 5 + Math.floor(Math.random() * 3); // 5–7
+        const segGap   = 4 + Math.random() * 2;             // 4–6 px
+        const radius   = 1.6 + Math.random() * 1.0;         // 1.6–2.6 px
+        const x = Math.random() * this.w;
+        const y = Math.random() * this.h;
+        const segments = [];
+        for (let i = 0; i < segCount; i++) segments.push({ x: x - i * segGap, y });
+        return {
+            segments,
+            segGap,
+            radius,
+            color: this.colors[Math.floor(Math.random() * this.colors.length)],
+            target: this.pickTarget(),
+            // Each worm wanders at a slightly different pace so the swarm
+            // doesn't pulse in unison.
+            speed: 0.18 + Math.random() * 0.22, // px/frame at 60fps
+            retargetIn: 60 + Math.random() * 240,
+        };
+    }
+
+    pickTarget() {
+        const margin = 40;
+        return {
+            x: -margin + Math.random() * (this.w + 2 * margin),
+            y: -margin + Math.random() * (this.h + 2 * margin),
+        };
+    }
+
+    update(dtScale) {
+        for (const worm of this.worms) {
+            worm.retargetIn -= dtScale;
+            if (worm.retargetIn <= 0) {
+                worm.target = this.pickTarget();
+                worm.retargetIn = 60 + Math.random() * 240;
+            }
+            const head = worm.segments[0];
+            const dx = worm.target.x - head.x;
+            const dy = worm.target.y - head.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            const step = Math.min(dist, worm.speed * dtScale);
+            head.x += (dx / dist) * step;
+            head.y += (dy / dist) * step;
+
+            for (let i = 1; i < worm.segments.length; i++) {
+                const prev = worm.segments[i - 1];
+                const cur = worm.segments[i];
+                const sx = prev.x - cur.x;
+                const sy = prev.y - cur.y;
+                const sd = Math.hypot(sx, sy) || 1;
+                if (sd > worm.segGap) {
+                    cur.x = prev.x - (sx / sd) * worm.segGap;
+                    cur.y = prev.y - (sy / sd) * worm.segGap;
+                }
+            }
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.w, this.h);
+        for (const worm of this.worms) {
+            ctx.fillStyle = worm.color;
+            for (const seg of worm.segments) {
+                ctx.beginPath();
+                ctx.arc(seg.x, seg.y, worm.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    loop(now) {
+        // Scale movement to real elapsed time so a tab in background
+        // doesn't queue up a long jump on resume.
+        const dt = Math.min((now - this.lastFrame) / (1000 / 60), 3);
+        this.lastFrame = now;
+        this.update(dt);
+        this.draw();
+        requestAnimationFrame((t) => this.loop(t));
+    }
 }
