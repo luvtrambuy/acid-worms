@@ -599,6 +599,14 @@ class BgWormSwarm {
             'rgba(255, 249, 236, 0.55)', // paper-cream
         ];
 
+        // Worm coordinates live in document space (y measured from the
+        // top of the page). Canvas stays viewport-sized for cheap redraw;
+        // at draw time we subtract scrollY so worms travel with the page.
+        this.scrollY = window.scrollY || 0;
+        window.addEventListener('scroll', () => {
+            this.scrollY = window.scrollY || 0;
+        }, { passive: true });
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
@@ -606,6 +614,13 @@ class BgWormSwarm {
 
         this.lastFrame = performance.now();
         requestAnimationFrame((t) => this.loop(t));
+    }
+
+    // visible range in document space, padded so worms slide in/out
+    // smoothly instead of popping at the edge.
+    visibleRange() {
+        const margin = 100;
+        return [this.scrollY - margin, this.scrollY + this.h + margin];
     }
 
     resize() {
@@ -623,8 +638,9 @@ class BgWormSwarm {
         const segCount = 5 + Math.floor(Math.random() * 3); // 5–7
         const segGap   = 4 + Math.random() * 2;             // 4–6 px
         const radius   = 1.6 + Math.random() * 1.0;         // 1.6–2.6 px
+        const [top, bottom] = this.visibleRange();
         const x = Math.random() * this.w;
-        const y = Math.random() * this.h;
+        const y = top + Math.random() * (bottom - top);
         const segments = [];
         for (let i = 0; i < segCount; i++) segments.push({ x: x - i * segGap, y });
         return {
@@ -633,23 +649,24 @@ class BgWormSwarm {
             radius,
             color: this.colors[Math.floor(Math.random() * this.colors.length)],
             target: this.pickTarget(),
-            // Each worm wanders at a slightly different pace so the swarm
-            // doesn't pulse in unison.
-            speed: 0.18 + Math.random() * 0.22, // px/frame at 60fps
+            speed: 0.18 + Math.random() * 0.22,
             retargetIn: 60 + Math.random() * 240,
         };
     }
 
     pickTarget() {
         const margin = 40;
+        const [top, bottom] = this.visibleRange();
         return {
             x: -margin + Math.random() * (this.w + 2 * margin),
-            y: -margin + Math.random() * (this.h + 2 * margin),
+            y: top + Math.random() * (bottom - top),
         };
     }
 
     update(dtScale) {
-        for (const worm of this.worms) {
+        const [top, bottom] = this.visibleRange();
+        for (let i = 0; i < this.worms.length; i++) {
+            const worm = this.worms[i];
             worm.retargetIn -= dtScale;
             if (worm.retargetIn <= 0) {
                 worm.target = this.pickTarget();
@@ -663,9 +680,9 @@ class BgWormSwarm {
             head.x += (dx / dist) * step;
             head.y += (dy / dist) * step;
 
-            for (let i = 1; i < worm.segments.length; i++) {
-                const prev = worm.segments[i - 1];
-                const cur = worm.segments[i];
+            for (let j = 1; j < worm.segments.length; j++) {
+                const prev = worm.segments[j - 1];
+                const cur = worm.segments[j];
                 const sx = prev.x - cur.x;
                 const sy = prev.y - cur.y;
                 const sd = Math.hypot(sx, sy) || 1;
@@ -674,17 +691,26 @@ class BgWormSwarm {
                     cur.y = prev.y - (sy / sd) * worm.segGap;
                 }
             }
+
+            // If the whole worm has scrolled / drifted out of sight,
+            // recycle it into the current viewport so density stays
+            // roughly constant whatever section you're on.
+            const tail = worm.segments[worm.segments.length - 1];
+            const farAbove = head.y < top - 60 && tail.y < top - 60;
+            const farBelow = head.y > bottom + 60 && tail.y > bottom + 60;
+            if (farAbove || farBelow) this.worms[i] = this.makeWorm();
         }
     }
 
     draw() {
         const ctx = this.ctx;
         ctx.clearRect(0, 0, this.w, this.h);
+        const offsetY = this.scrollY;
         for (const worm of this.worms) {
             ctx.fillStyle = worm.color;
             for (const seg of worm.segments) {
                 ctx.beginPath();
-                ctx.arc(seg.x, seg.y, worm.radius, 0, Math.PI * 2);
+                ctx.arc(seg.x, seg.y - offsetY, worm.radius, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
