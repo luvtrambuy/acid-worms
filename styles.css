@@ -60,15 +60,15 @@ img {
 }
 
 /* ============================================================
-   PAGE BACKGROUND CANVAS — viewport-fixed gradient + blobs.
-   Fixed positioning means the background never depends on body's
-   resolved height (iOS Safari mis-resolves height: 100% on long
-   pages), so the gradient covers the entire scroll on every device.
-   Section backgrounds stay transparent so the canvas shows through.
+   PAGE BACKGROUND CANVAS — one continuous gradient covering the
+   whole document height. Section backgrounds are transparent so
+   the canvas shows through, killing all section seams.
    ============================================================ */
 .page-bg {
-    position: fixed;
+    position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
@@ -273,12 +273,9 @@ section, footer { position: relative; z-index: 2; }
 }
 
 @keyframes logo-buzz {
-    0%   { transform: translate(0, 0) rotate(0deg); }
-    20%  { transform: translate(-1.5px, 1px) rotate(-0.8deg); }
-    40%  { transform: translate(1.5px, -1px) rotate(0.6deg); }
-    60%  { transform: translate(-1px, -1.5px) rotate(0.8deg); }
-    80%  { transform: translate(1px, 1.5px) rotate(-0.6deg); }
-    100% { transform: translate(0, 0) rotate(0deg); }
+    0%, 100% { transform: rotate(0deg); }
+    25%      { transform: rotate(-1deg); }
+    75%      { transform: rotate(1deg); }
 }
 
 .hero-logo-svg .star {
