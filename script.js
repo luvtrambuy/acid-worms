@@ -145,20 +145,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Any tap/click anywhere = small burst at the point.
     // Skip the worm canvas (its own worm lives there) and lightbox overlays.
-    // pointerdown fires reliably for both mouse and touch; click is kept as a
-    // fallback for environments without Pointer Events, with a small dedupe
-    // window so we don't double-burst when both fire on the same tap.
-    let lastBurstTs = 0;
-    const burstAt = (e) => {
+    // We listen to pointerdown only — it fires for both mouse and touch
+    // without the click double-trigger we used to dedupe around.
+    const isMobile = window.matchMedia('(hover: none)').matches;
+    const BURST_COUNT = isMobile ? 10 : 16;
+    const BURST_POWER = isMobile ? 0.75 : 0.85;
+    const handler = window.PointerEvent ? 'pointerdown' : 'click';
+    document.addEventListener(handler, (e) => {
         if (e.target.closest('#acid-worm')) return;
         if (e.target.closest('.confetti-canvas')) return;
-        const now = performance.now();
-        if (now - lastBurstTs < 300) return;
-        lastBurstTs = now;
-        confetti.burst(e.clientX, e.clientY, 16, /*power*/ 0.85);
-    };
-    document.addEventListener('pointerdown', burstAt);
-    document.addEventListener('click', burstAt);
+        confetti.burst(e.clientX, e.clientY, BURST_COUNT, BURST_POWER);
+    });
 
     /* ---------- Build your own button — mega burst ---------- */
     const buildBtn = document.getElementById('build-your-own');
@@ -271,8 +268,12 @@ class ConfettiSystem {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        // Hard cap so we don't melt the laptop if the user really goes nuts
-        this.MAX_PARTICLES = 1200;
+        // Mobile gets a smaller cap and faster decay so a few enthusiastic
+        // taps don't pile up into a permanent confetti graveyard on screen.
+        const mobile = window.matchMedia('(hover: none)').matches;
+        this.MAX_PARTICLES = mobile ? 300 : 1200;
+        this.REST_BEFORE_FADE = mobile ? 0.4 : 1.2;   // seconds at rest before fading
+        this.FLOOR_FADE = mobile ? 1.0 : 0.45;        // life lost per second once fading
     }
 
     resize() {
@@ -339,7 +340,8 @@ class ConfettiSystem {
         const AIR_DRAG = 0.992;
         const W = this.w;
         const H = this.h;
-        const FLOOR_FADE = 0.45; // when resting, life drops this fast per second
+        const FLOOR_FADE = this.FLOOR_FADE;
+        const REST_BEFORE_FADE = this.REST_BEFORE_FADE;
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
@@ -368,7 +370,7 @@ class ConfettiSystem {
             const slow = Math.abs(p.vx) < 18 && Math.abs(p.vy) < 30;
             if (nearFloor && slow) {
                 p.restTime += dt;
-                if (p.restTime > 1.2) {
+                if (p.restTime > REST_BEFORE_FADE) {
                     p.life -= FLOOR_FADE * dt;
                 }
             } else {
