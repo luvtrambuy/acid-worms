@@ -822,6 +822,20 @@ section, footer { position: relative; z-index: 2; }
        the animation and trim the blur so the blobs become a cheap
        static color wash instead of a per-frame redraw. */
     .page-blob { animation: none !important; filter: blur(60px); }
+
+    /* The gradient stops are tuned for desktop scroll length; on a
+       phone the subtitle ends up on pink-on-pink and the leashes
+       title on yellow-on-yellow. Swap the accent colors so each
+       title contrasts against whatever band of the gradient lands
+       behind it on a smaller screen. */
+    .hero-subtitle {
+        color: var(--aw-yellow);
+        text-shadow: 0 3px 0 var(--aw-pink-deep);
+    }
+    .phone-leashes .gallery-title {
+        color: var(--aw-pink-deep);
+        text-shadow: 0 6px 0 var(--aw-yellow);
+    }
 }
 
 @media (max-width: 560px) {

@@ -146,24 +146,23 @@ document.addEventListener('DOMContentLoaded', function() {
         new BgWormSwarm(wormCanvasEl);
     }
 
-    /* ---------- Confetti system — global, bouncing physics ---------- */
-    const confetti = new ConfettiSystem();
-
-    // Any tap/click anywhere = small burst at the point.
-    // Skip the worm canvas (its own worm lives there) and lightbox overlays.
-    // We listen to pointerdown only — it fires for both mouse and touch
-    // without the click double-trigger we used to dedupe around.
+    /* ---------- Confetti system — desktop only ----------
+       Mobile phones consistently choked on the canvas redraw cost,
+       even after tuning particle caps / fade. Disabled on touch
+       devices entirely; the rest of the brand vibe carries it. */
     const isMobile = window.matchMedia('(hover: none)').matches;
-    const BURST_COUNT = isMobile ? 10 : 16;
-    const BURST_POWER = isMobile ? 0.75 : 0.85;
-    const handler = window.PointerEvent ? 'pointerdown' : 'click';
-    document.addEventListener(handler, (e) => {
-        if (e.target.closest('#acid-worm')) return;
-        if (e.target.closest('.confetti-canvas')) return;
-        confetti.burst(e.clientX, e.clientY, BURST_COUNT, BURST_POWER);
-    });
+    const confetti = isMobile ? null : new ConfettiSystem();
 
-    /* ---------- Build your own button — mega burst ---------- */
+    if (confetti) {
+        const handler = window.PointerEvent ? 'pointerdown' : 'click';
+        document.addEventListener(handler, (e) => {
+            if (e.target.closest('#acid-worm')) return;
+            if (e.target.closest('.confetti-canvas')) return;
+            confetti.burst(e.clientX, e.clientY, 16, /*power*/ 0.85);
+        });
+    }
+
+    /* ---------- Build your own button — mega burst (desktop) ---------- */
     const buildBtn = document.getElementById('build-your-own');
     if (buildBtn) {
         buildBtn.addEventListener('click', () => {
@@ -175,8 +174,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             console.log('[track] build_your_own_click');
 
-            const rect = buildBtn.getBoundingClientRect();
-            confetti.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 70, /*power*/ 1.25);
+            if (confetti) {
+                const rect = buildBtn.getBoundingClientRect();
+                confetti.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 70, /*power*/ 1.25);
+            }
         });
     }
 
