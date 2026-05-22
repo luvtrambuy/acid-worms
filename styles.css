@@ -269,6 +269,16 @@ section, footer { position: relative; z-index: 2; }
     75%      { transform: rotate(1deg); }
 }
 
+/* On mobile we drop the breathe and run the buzz constantly — the
+   logo's permanent state is a low-amplitude shake. A tap still adds
+   the electric filter overlay via .is-buzzing for an extra punch.
+   Width OR hover so a narrowed desktop window picks this up too. */
+@media (max-width: 768px), (hover: none) {
+    .hero-logo-svg {
+        animation: logo-buzz 0.08s linear infinite;
+    }
+}
+
 .hero-logo-svg .star {
     transform-box: fill-box;
     transform-origin: center;

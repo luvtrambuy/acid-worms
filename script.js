@@ -149,8 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
     /* ---------- Confetti system — desktop only ----------
        Mobile phones consistently choked on the canvas redraw cost,
        even after tuning particle caps / fade. Disabled on touch
-       devices entirely; the rest of the brand vibe carries it. */
-    const isMobile = window.matchMedia('(hover: none)').matches;
+       devices entirely; the rest of the brand vibe carries it.
+       We OR in (max-width: 768px) so the same gate kicks in when
+       testing by narrowing a desktop window, not just on real touch
+       hardware. */
+    const isMobile = window.matchMedia('(hover: none), (max-width: 768px)').matches;
     const confetti = isMobile ? null : new ConfettiSystem();
 
     if (confetti) {
