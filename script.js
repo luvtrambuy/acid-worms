@@ -100,43 +100,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (aboutText && aboutText.style.opacity === '0') revealTranslate(aboutText);
     }, 2000);
 
-    /* ---------- Gallery lightbox ---------- */
-    galleryItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const img = item.querySelector('img');
-            if (!img) return;
-
-            const overlay = document.createElement('div');
-            Object.assign(overlay.style, {
-                position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-                backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 9999,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', opacity: 0, transition: 'opacity 0.3s ease'
-            });
-
-            const enlargedImg = document.createElement('img');
-            enlargedImg.src = img.src;
-            Object.assign(enlargedImg.style, {
-                maxWidth: '90%', maxHeight: '90%', objectFit: 'contain',
-                transform: 'scale(0.85)', transition: 'transform 0.3s ease', borderRadius: '4px'
-            });
-
-            overlay.appendChild(enlargedImg);
-            document.body.appendChild(overlay);
-
-            requestAnimationFrame(() => {
-                overlay.style.opacity = '1';
-                enlargedImg.style.transform = 'scale(1)';
-            });
-
-            overlay.addEventListener('click', () => {
-                overlay.style.opacity = '0';
-                enlargedImg.style.transform = 'scale(0.85)';
-                setTimeout(() => overlay.remove(), 300);
-            });
-        });
-    });
-
     /* ---------- Global cursor follower (acid blob) ---------- */
     initCursorBlob();
 
