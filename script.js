@@ -103,20 +103,18 @@ document.addEventListener('DOMContentLoaded', function() {
     /* ---------- Global cursor follower (acid blob) ---------- */
     initCursorBlob();
 
-    /* ---------- Background worm swarm ---------- */
+    /* ---------- Mobile gate — shared by worms + confetti ---------- */
+    const isMobile = window.matchMedia('(hover: none), (max-width: 768px)').matches;
+
+    /* ---------- Background worm swarm — desktop only ---------- */
     const wormCanvasEl = document.querySelector('.bg-worms');
-    if (wormCanvasEl && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (wormCanvasEl
+        && !isMobile
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         new BgWormSwarm(wormCanvasEl);
     }
 
-    /* ---------- Confetti system — desktop only ----------
-       Mobile phones consistently choked on the canvas redraw cost,
-       even after tuning particle caps / fade. Disabled on touch
-       devices entirely; the rest of the brand vibe carries it.
-       We OR in (max-width: 768px) so the same gate kicks in when
-       testing by narrowing a desktop window, not just on real touch
-       hardware. */
-    const isMobile = window.matchMedia('(hover: none), (max-width: 768px)').matches;
+    /* ---------- Confetti system — desktop only ---------- */
     const confetti = isMobile ? null : new ConfettiSystem();
 
     if (confetti) {
