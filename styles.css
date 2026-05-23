@@ -27,11 +27,30 @@
 
 html {
     scroll-behavior: smooth;
+    /* Gradient lives on html so the browser paints it as a native
+       background — no compositing-layer tiling. Percentage stops
+       map to the full document height automatically. */
+    min-height: 100%;
+    background: linear-gradient(180deg,
+        var(--aw-pink)   0%,
+        var(--aw-pink)   7%,
+        var(--aw-orange) 12%,
+        var(--aw-yellow) 15%,
+        var(--aw-yellow) 22%,
+        var(--aw-orange) 28%,
+        var(--aw-pink)   42%,
+        var(--aw-pink)   56%,
+        var(--aw-orange) 65%,
+        var(--aw-yellow) 70%,
+        var(--aw-yellow) 73%,
+        var(--aw-orange) 82%,
+        var(--aw-pink)   100%
+    );
 }
 
 body {
     font-family: var(--font-main);
-    background-color: var(--aw-pink);
+    background: transparent;
     color: var(--aw-ink);
     overflow-x: hidden;
     line-height: 1.6;
@@ -72,21 +91,7 @@ img {
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
-    background: linear-gradient(180deg,
-        var(--aw-pink)   0%,
-        var(--aw-pink)   7%,
-        var(--aw-orange) 12%,
-        var(--aw-yellow) 15%,
-        var(--aw-yellow) 22%,
-        var(--aw-orange) 28%,
-        var(--aw-pink)   42%,
-        var(--aw-pink)   56%,
-        var(--aw-orange) 65%,
-        var(--aw-yellow) 70%,
-        var(--aw-yellow) 73%,
-        var(--aw-orange) 82%,
-        var(--aw-pink)   100%
-    );
+    /* Gradient moved to html — this container only holds the blobs. */
 }
 
 .page-blob {
@@ -815,11 +820,10 @@ section, footer { position: relative; z-index: 2; }
     .footer-card { box-shadow: 5px 5px 0 var(--aw-black); }
     .footer-card:hover { box-shadow: 8px 8px 0 var(--aw-black); }
 
-    /* Mobile GPUs choke on six large blur:110px elements that animate
-       transform every frame — composite has to rebuild the blur. Drop
-       the animation and trim the blur so the blobs become a cheap
-       static color wash instead of a per-frame redraw. */
-    .page-blob { animation: none !important; filter: blur(60px); }
+    /* Six blurred blobs create six compositing layers that iOS Safari
+       evicts from GPU memory on scroll, causing visible re-render
+       seams. Hide them entirely — the html gradient alone is enough. */
+    .page-blob { display: none; }
 
     /* The gradient stops are tuned for desktop scroll length; on a
        phone the subtitle ends up on pink-on-pink and the leashes
