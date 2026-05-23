@@ -258,9 +258,7 @@ section, footer { position: relative; z-index: 2; }
    doesn't reliably animate feTurbulence) + yellow glow drop-shadow. */
 .hero-logo-wrap.is-buzzing .hero-logo-svg {
     animation: logo-buzz 0.08s linear infinite;
-    filter:
-        drop-shadow(0 12px 36px rgba(232, 224, 7, 0.45))
-        url(#aw-electric);
+    filter: drop-shadow(0 12px 36px rgba(232, 224, 7, 0.45));
 }
 
 @keyframes logo-buzz {
@@ -269,19 +267,6 @@ section, footer { position: relative; z-index: 2; }
     75%      { transform: rotate(1deg); }
 }
 
-/* On mobile the logo's permanent state mirrors the desktop hover:
-   breathing animation off, yellow drop-shadow glow + the #aw-electric
-   feTurbulence filter applied so the outline shimmers/wriggles. This
-   is the look the user gets without any tap. Width OR hover so a
-   narrowed desktop window picks this up too. */
-@media (max-width: 768px), (hover: none) {
-    .hero-logo-svg {
-        animation: none;
-        filter:
-            drop-shadow(0 12px 36px rgba(232, 224, 7, 0.45))
-            url(#aw-electric);
-    }
-}
 
 .hero-logo-svg .star {
     transform-box: fill-box;
