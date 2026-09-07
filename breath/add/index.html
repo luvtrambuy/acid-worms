@@ -74,7 +74,6 @@
         }
 
         .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--aw-ink); }
-        .btn-quiet { background: #fff; font-size: 15px; }
 
         .zoom {
             margin-top: 22px;
@@ -91,10 +90,9 @@
         <h1>Дыхательная практика</h1>
         <p class="when">Вторник, 8 сентября · 21:00–21:30 МСК</p>
 
-        <p class="status" id="status">Открываем календарь…</p>
+        <p class="status" id="status">Открываем календарь. Если он не открылся сам — нажми кнопку.</p>
 
-        <a class="btn" id="manual" href="../practice.ics">Открыть вручную</a>
-        <a class="btn btn-quiet" id="alt" href="../practice.ics">Скачать файл события</a>
+        <a class="btn" id="manual" href="../practice.ics">Открыть событие</a>
 
         <p class="zoom">
             Заходить сюда:<br>
@@ -105,30 +103,11 @@
     <script>
         (function () {
             var ICS = 'https://acidworms.com/breath/practice.ics';
-            var WEBCAL = 'webcal://acidworms.com/breath/practice.ics';
 
-            var ua = navigator.userAgent;
-            var isApple = /iPad|iPhone|iPod/.test(ua) ||
-                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-                          /Macintosh/.test(ua);
-
-            var target = isApple ? WEBCAL : ICS;
-
-            document.getElementById('manual').href = target;
-            document.getElementById('alt').href = ICS;
-
-            if (isApple) {
-                document.getElementById('status').textContent =
-                    'Открываем Календарь. Если он не открылся — нажми кнопку ниже.';
-            } else {
-                document.getElementById('alt').style.display = 'none';
-                document.getElementById('status').textContent =
-                    'Скачиваем файл события. Если ничего не началось — нажми кнопку ниже.';
-            }
-
-            // Fire after first paint so the fallback is already on screen
-            // if the browser blocks the automatic hand-off.
-            setTimeout(function () { window.location.href = target; }, 350);
+            // The .ics carries its own type (text/calendar), so the OS hands it
+            // to whichever calendar the person has set as default. Nothing to
+            // detect and nothing for them to fill in.
+            setTimeout(function () { window.location.href = ICS; }, 350);
         })();
     </script>
 </body>
