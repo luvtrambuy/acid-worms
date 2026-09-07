@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дыхательная практика — добавляем в календарь</title>
+    <meta name="robots" content="noindex">
+
+    <meta property="og:title" content="Дыхательная практика — 8 сентября, 21:00 МСК">
+    <meta property="og:description" content="Нажми, чтобы добавить в календарь. Вторник 8 сентября, 21:00–21:30 по Москве.">
+    <meta property="og:url" content="https://acidworms.com/breath/add/">
+
+    <style>
+        :root {
+            --aw-pink: #E7196E;
+            --aw-pink-deep: #AA1150;
+            --aw-yellow: #FBD301;
+            --aw-orange: #FDA905;
+            --aw-paper: #FFF9EC;
+            --aw-ink: #171717;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            min-height: 100%;
+            background: linear-gradient(165deg, var(--aw-pink) 0%, var(--aw-orange) 45%, var(--aw-yellow) 100%);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--aw-ink);
+            line-height: 1.55;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 20px 40px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .card {
+            background: var(--aw-paper);
+            width: 100%;
+            max-width: 420px;
+            border: 3px solid var(--aw-ink);
+            border-radius: 26px;
+            box-shadow: 8px 8px 0 var(--aw-ink);
+            padding: 30px 24px 26px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            line-height: 1.2;
+            color: var(--aw-pink-deep);
+        }
+
+        .when { margin-top: 12px; font-size: 17px; font-weight: 600; }
+        .status { margin-top: 18px; font-size: 15px; opacity: 0.7; }
+
+        .btn {
+            display: block;
+            margin-top: 18px;
+            text-decoration: none;
+            color: var(--aw-ink);
+            background: var(--aw-yellow);
+            border: 3px solid var(--aw-ink);
+            border-radius: 16px;
+            padding: 14px 18px;
+            font-weight: 700;
+            font-size: 17px;
+            box-shadow: 4px 4px 0 var(--aw-ink);
+        }
+
+        .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--aw-ink); }
+        .btn-quiet { background: #fff; font-size: 15px; }
+
+        .zoom {
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 2px dashed rgba(23, 23, 23, 0.25);
+            font-size: 14px;
+        }
+
+        .zoom a { color: var(--aw-pink-deep); font-weight: 600; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>Дыхательная практика</h1>
+        <p class="when">Вторник, 8 сентября · 21:00–21:30 МСК</p>
+
+        <p class="status" id="status">Открываем календарь…</p>
+
+        <a class="btn" id="manual" href="../practice.ics">Открыть вручную</a>
+        <a class="btn btn-quiet" id="alt" href="../practice.ics">Скачать файл события</a>
+
+        <p class="zoom">
+            Заходить сюда:<br>
+            <a href="https://us05web.zoom.us/j/89386059450?pwd=Nr7LluaVjXROzUGdgOT00Fbr5QSrRY.1" target="_blank" rel="noopener">https://us05web.zoom.us/j/89386059450</a>
+        </p>
+    </main>
+
+    <script>
+        (function () {
+            var ICS = 'https://acidworms.com/breath/practice.ics';
+            var WEBCAL = 'webcal://acidworms.com/breath/practice.ics';
+
+            var ua = navigator.userAgent;
+            var isApple = /iPad|iPhone|iPod/.test(ua) ||
+                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+                          /Macintosh/.test(ua);
+
+            var target = isApple ? WEBCAL : ICS;
+
+            document.getElementById('manual').href = target;
+            document.getElementById('alt').href = ICS;
+
+            if (isApple) {
+                document.getElementById('status').textContent =
+                    'Открываем Календарь. Если он не открылся — нажми кнопку ниже.';
+            } else {
+                document.getElementById('alt').style.display = 'none';
+                document.getElementById('status').textContent =
+                    'Скачиваем файл события. Если ничего не началось — нажми кнопку ниже.';
+            }
+
+            // Fire after first paint so the fallback is already on screen
+            // if the browser blocks the automatic hand-off.
+            setTimeout(function () { window.location.href = target; }, 350);
+        })();
+    </script>
+</body>
+</html>
