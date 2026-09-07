@@ -113,25 +113,42 @@
     <script>
         (function () {
             var ICS = 'https://acidworms.com/breath/practice.ics';
+            var WEBCAL = 'webcal://acidworms.com/breath/practice.ics';
 
-            // The .ics carries its own type (text/calendar), so the OS hands it
-            // to whichever calendar the person has set as default. Nothing to
-            // detect and nothing for them to fill in.
-            setTimeout(function () { window.location.href = ICS; }, 350);
-
-            // Telegram, Instagram and friends open links in their own webview,
-            // which cannot hand a download to the calendar. Nothing can force
-            // Safari open from in here, so say what to press instead.
             var ua = navigator.userAgent;
-            var inApp = /Telegram|Instagram|FBAN|FBAV|Line\/|MicroMessenger/i.test(ua) ||
-                        (/iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua));
-            if (inApp) {
+            var isIOS = /iPhone|iPad|iPod/.test(ua) ||
+                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+            // Apple calls these chromeless browsers: the webview an app embeds
+            // instead of Safari. It cannot hand a downloaded .ics to Calendar,
+            // so the file just lands in Downloads and nothing opens. Chrome and
+            // Firefox on iOS count too — they are webviews around WebKit.
+            var chromeless = /Telegram|Instagram|FBAN|FBAV|FB_IAB|CriOS|FxiOS|EdgiOS|Line\/|MicroMessenger|OKApp|VKAndroidApp/i.test(ua) ||
+                             (isIOS && !/Safari/.test(ua));
+
+            // In real Safari the .ics opens Calendar with an Add button, which
+            // is what we want. Inside a webview only a custom scheme escapes to
+            // the system, so fall back to webcal: Calendar opens on the spot and
+            // offers to subscribe. Same trade-off AddEvent makes.
+            var useWebcal = isIOS && chromeless;
+            var target = useWebcal ? WEBCAL : ICS;
+
+            document.getElementById('manual').href = target;
+
+            if (useWebcal) {
+                document.getElementById('status').textContent =
+                    'Открываем Календарь. Он предложит подписаться — нажми Подписаться, событие встанет на место.';
+            }
+
+            if (chromeless && !useWebcal) {
                 var hint = document.getElementById('hint');
                 hint.textContent = /Telegram/i.test(ua)
                     ? 'Страница открылась внутри Телеграма, а его браузер не умеет отдавать событие календарю. Нажми три точки сверху справа и выбери Открыть в Safari.'
                     : 'Страница открылась внутри приложения, а его встроенный браузер не умеет отдавать событие календарю. Открой её в Safari или Chrome через меню браузера.';
                 hint.hidden = false;
             }
+
+            setTimeout(function () { window.location.href = target; }, 350);
         })();
     </script>
 </body>
